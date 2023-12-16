@@ -1,5 +1,5 @@
 {
-  "name": "koishi-plugin-give-you-some-color",
+  "name": "@ltxhhz/koishi-plugin-give-you-some-color",
   "description": "给你点颜色看看",
   "version": "0.0.1",
   "main": "lib/index.js",
@@ -16,6 +16,27 @@
     "plugin"
   ],
   "peerDependencies": {
-    "koishi": "4.15.7"
+    "koishi": "4.15.2"
+  },
+  "dependencies": {
+    "color": "^4.2.3"
+  },
+  "devDependencies": {
+    "@ltxhhz/koishi-plugin-skia-canvas": "^0.0.3",
+    "@types/color": "^3.0.6"
+  },
+  "koishi": {
+    "description": {
+      "en": "Sends solid color images, using skia-canvas.",
+      "zh": "给你点颜色看看，使用 skia-canvas。"
+    },
+    "service": {
+      "required": [
+        "skia"
+      ]
+    },
+    "locales": [
+      "zh"
+    ]
   }
 }
