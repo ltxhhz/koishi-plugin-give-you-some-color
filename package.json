@@ -1,7 +1,7 @@
 {
   "name": "@ltxhhz/koishi-plugin-give-you-some-color",
   "description": "给你点颜色看看",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "files": [
@@ -16,7 +16,7 @@
     "plugin"
   ],
   "peerDependencies": {
-    "koishi": "4.15.2"
+    "koishi": "^4.15.2"
   },
   "dependencies": {
     "color": "^4.2.3"
