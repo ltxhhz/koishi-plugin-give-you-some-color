@@ -131,10 +131,10 @@ export function apply(ctx: Context, config: Config) {
       logger.info('<-- ', color)
       if (color) {
         try {
-          const colorName = colors[color]
+          const colorName: string | undefined = colors[color]
           let co: Color
           if (colorName) {
-            co = Color(colorName)
+            co = Color(colorName.toLowerCase())
           } else {
             co = Color(color)
           }
