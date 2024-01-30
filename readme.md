@@ -2,11 +2,12 @@
 
 [![npm](https://img.shields.io/npm/v/@ltxhhz/koishi-plugin-give-you-some-color?style=flat-square)](https://www.npmjs.com/package/@ltxhhz/koishi-plugin-give-you-some-color)
 
-给你点颜色看看
+![img](./images/2.jpg)
 
 使用了 [color - npm (npmjs.com)](https://www.npmjs.com/package/color) 库，输入的字符串由 [color-string - npm (npmjs.com)](https://www.npmjs.com/package/color-string) 库处理。
 
-支持部分中文颜色，因为和英文[做了映射](./src/colors.ts)。
+* 支持部分中文颜色，因为和英文[做了映射](./src/colors.ts)。
+* 支持使用模板，详见下方示例和配置。
 
 ## 前置
 
@@ -14,7 +15,11 @@
 
 ## 示例
 
-![示例](./images/1.png "示例")
+![示例](./images/3.png "示例")
+
+## 配置
+
+![img](./images/4.png)
 
 ## 其他插件
 
