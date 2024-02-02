@@ -127,7 +127,7 @@ export function apply(ctx: Context, config: Config) {
     // .shortcut(/^这是\s*(#.{3,8})\s*$/, { args: ['$1'] })
     // .shortcut(/^这是\s*(\w+?)\((.+)\)\s*$/, { args: ['$1($2)'] })
     .action(async ({}, input) => {
-      let color = input.toLowerCase()
+      let color = input
       logger.info('<-- ', color)
       if (color) {
         try {
