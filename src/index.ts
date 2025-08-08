@@ -39,19 +39,19 @@ export interface Config {
 export const Config: Schema<Config> = Schema.intersect([
   Schema.object({
     width: Schema.number().default(100).description('图片宽，配置模板后使用模板的宽'),
-    height: Schema.number().default(100).description('图片高，配置模板后使用模板的高'),
+    height: Schema.number().default(100).description('图片高，配置模板后使用模板的高')
   }),
   Schema.object({
     template: Schema.intersect([
       Schema.object({
-        enable: Schema.boolean().default(false).description('是否启用'),
+        enable: Schema.boolean().default(false).description('是否启用')
       }),
       Schema.union([
         Schema.object({
           enable: Schema.const(true).required(),
           image: Schema.intersect([
             Schema.object({
-              custom: Schema.boolean().default(false).description('使用自定义图片'),
+              custom: Schema.boolean().default(false).description('使用自定义图片')
             }),
             Schema.union([
               Schema.object({
@@ -60,20 +60,22 @@ export const Config: Schema<Config> = Schema.intersect([
                   filters: [
                     {
                       name: 'image',
-                      extensions: ['png'],
-                    },
-                  ],
+                      extensions: ['png']
+                    }
+                  ]
                 })
                   .required()
-                  .description('模板图片路径'),
+                  .description('模板图片路径')
               }),
               Schema.object({
                 custom: Schema.const(false),
-                path: Schema.union([Schema.const('assets/template1.png').description('熊猫头1'), Schema.const('assets/template1.png').description('熊猫头1')]).description('自带模板'),
-              }),
-            ]),
+                path: Schema.union([Schema.const('assets/template1.png').description('熊猫头1'), Schema.const('assets/template2.png').description('魔性小人1')]).description('自带模板')
+              })
+            ])
           ]),
-          text: Schema.string().default('这是#[input]\nThis is #[input]').description('模板文字内容 `#[input]`为用户输入的颜色，`#[hex]` `#[hexa]`为转换过的十六进制颜色，`#[rgb]`为`rgb(r, g, b)`，还有其他几种格式'),
+          text: Schema.string()
+            .default('这是#[input]\nThis is #[inputE]')
+            .description('模板文字内容 `#[input]`为用户输入的颜色，`#[inputE]`为匹配到的英文名，没有则回退 `#[input]`，`#[hex]` `#[hexa]`为转换过的十六进制颜色，`#[rgb]`为`rgb(r, g, b)`，还有其他几种格式'),
           textColor: Schema.string().default('black').description('颜色值'),
           textAlign: Schema.union(['left', 'center', 'right']).default('center').description('文字水平对齐方式'),
           textBaseline: Schema.union(['top', 'hanging', 'middle', 'alphabetic', 'ideographic', 'bottom']).default('middle').description('文字对齐的基线'),
@@ -83,39 +85,38 @@ export const Config: Schema<Config> = Schema.intersect([
           fontSize: Schema.number().default(12).description('字体大小'),
           fontFamily: Schema.string().default('SimHei').description('字体系列'),
           fontWeight: Schema.string().default('normal').description('字体粗细'),
-          fontStyle: Schema.string().default('normal').description('字体样式'),
+          fontStyle: Schema.string().default('normal').description('字体样式')
         }),
-        Schema.object({}),
-      ]),
-    ]),
-  }).description('模板'),
+        Schema.object({})
+      ])
+    ])
+  }).description('模板')
 ])
 
 export function apply(ctx: Context, config: Config) {
-  const logger = ctx.logger('color')
   const { Canvas, loadImage, FontLibrary } = ctx.skia
-  ;(<any>config.template).image = Object.assign(
-    {
-      custom: false,
-      path: 'assets/template1.png',
-    },
-    (<any>config.template).image
-  )
-  config.template = Object.assign(
-    {
-      enable: false,
-      text: '这是#[input]\nThis is #[input]',
-      textColor: 'black',
-      textAlign: 'center',
-      textBaseline: 'middle',
-      textLineHeight: 20,
-      fontSize: 12,
-      fontFamily: 'SimHei',
-      fontWeight: 'normal',
-      fontStyle: 'normal',
-    },
-    config.template
-  )
+  // @ts-ignore
+  config.template.image = {
+    custom: false,
+    path: 'assets/template1.png',
+    // @ts-ignore
+    ...config.template.image
+  }
+
+  config.template = {
+    enable: false,
+    // @ts-ignore
+    text: '这是#[input]\nThis is #[inputE]',
+    textColor: 'black',
+    textAlign: 'center' as const,
+    textBaseline: 'middle' as const,
+    textLineHeight: 20,
+    fontSize: 12,
+    fontFamily: 'SimHei',
+    fontWeight: 'normal',
+    fontStyle: 'normal',
+    ...config.template
+  }
   config.height ||= 100
   config.width ||= 100
   // logger.info(FontLibrary.families.slice(0, FontLibrary.families.length / 2))
@@ -127,18 +128,17 @@ export function apply(ctx: Context, config: Config) {
     // .shortcut(/^这是\s*(#.{3,8})\s*$/, { args: ['$1'] })
     // .shortcut(/^这是\s*(\w+?)\((.+)\)\s*$/, { args: ['$1($2)'] })
     .action(async ({}, input) => {
-      let color = input
-      logger.info('<-- ', color)
-      if (color) {
+      ctx.logger.info('<-- ', input)
+      if (input) {
         try {
-          const colorName: string | undefined = colors[color]
+          const colorName: string | undefined = colors[input] || colors[input.replace(/色$/, '')]
           let co: Color
           if (colorName) {
             co = Color(colorName.toLowerCase())
           } else {
-            co = Color(color)
+            co = Color(input)
           }
-          logger.info('--> ', co.string())
+          ctx.logger.info('--> ', co.string())
           if (config.template.enable) {
             const tem = await loadImage(config.template.image.custom ? config.template.image.path : join(__dirname, config.template.image.path))
             const canvas = new Canvas(tem.width, tem.height)
@@ -156,6 +156,7 @@ export function apply(ctx: Context, config: Config) {
             // prettier-ignore
             cCtx.fillText(config.template.text
               .replaceAll('#[input]', input)
+              .replaceAll('#[inputE]', colorName || input)
               .replaceAll('#[hex]', co.hex())
               .replaceAll('#[hexa]', co.hexa())
               .replaceAll('#[rgb]', co.rgb().string())
@@ -169,12 +170,12 @@ export function apply(ctx: Context, config: Config) {
           } else {
             const canvas = new Canvas(config.width, config.height)
             const cCtx = canvas.getContext('2d')
-            cCtx.fillStyle = color
+            cCtx.fillStyle = co.hexa()
             cCtx.fillRect(0, 0, canvas.width, canvas.height)
             return h.image(canvas.toBufferSync('png'), 'image/png')
           }
         } catch (error) {
-          logger.warn(error)
+          ctx.logger.warn(error)
         }
       }
     })

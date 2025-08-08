@@ -1,12 +1,1 @@
-{
-  "useTabs": false,
-  "tabWidth": 2,
-  "bracketSpacing": true,
-  "semi": false,
-  "quoteProps": "as-needed",
-  "bracketSameLine": true,
-  "arrowParens": "avoid",
-  "singleQuote": true,
-  "proseWrap": "always",
-  "printWidth": 10000000
-}
+E:/work space/koishi-bot/.prettierrc
