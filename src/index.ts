@@ -1,6 +1,6 @@
-import { Context, Schema, h } from 'koishi'
+import { Context, Random, Schema, h } from 'koishi'
 
-import type {} from '@ltxhhz/koishi-plugin-skia-canvas'
+import type { Canvas } from '@ltxhhz/koishi-plugin-skia-canvas'
 import Color from 'color'
 import colors from './colors'
 import { join } from 'path'
@@ -12,6 +12,8 @@ export const inject = ['skia']
 export interface Config {
   width?: number
   height?: number
+  random?: boolean
+  parseErrorMsg?: string
   template:
     | {
         enable: true
@@ -39,7 +41,9 @@ export interface Config {
 export const Config: Schema<Config> = Schema.intersect([
   Schema.object({
     width: Schema.number().default(100).description('图片宽，配置模板后使用模板的宽'),
-    height: Schema.number().default(100).description('图片高，配置模板后使用模板的高')
+    height: Schema.number().default(100).description('图片高，配置模板后使用模板的高'),
+    random: Schema.boolean().default(true).description('不提供参数是否返回随机颜色'),
+    parseErrorMsg: Schema.string().default('颜色解析失败').description('解析错误时返回的信息')
   }),
   Schema.object({
     template: Schema.intersect([
@@ -75,7 +79,9 @@ export const Config: Schema<Config> = Schema.intersect([
           ]),
           text: Schema.string()
             .default('这是#[input]\nThis is #[inputE]')
-            .description('模板文字内容 `#[input]`为用户输入的颜色，`#[inputE]`为匹配到的英文名，没有则回退 `#[input]`，`#[hex]` `#[hexa]`为转换过的十六进制颜色，`#[rgb]`为`rgb(r, g, b)`，还有其他几种格式'),
+            .description(
+              '模板文字内容 `#[input]`为用户输入的颜色，`#[inputE]`为匹配到的英文名，没有则回退 `#[input]`，`#[hex]` `#[hexa]`为转换过的十六进制颜色，`#[rgb]`为`rgb(r, g, b)`，还有其他几种格式'
+            ),
           textColor: Schema.string().default('black').description('颜色值'),
           textAlign: Schema.union(['left', 'center', 'right']).default('center').description('文字水平对齐方式'),
           textBaseline: Schema.union(['top', 'hanging', 'middle', 'alphabetic', 'ideographic', 'bottom']).default('middle').description('文字对齐的基线'),
@@ -119,42 +125,52 @@ export function apply(ctx: Context, config: Config) {
   }
   config.height ||= 100
   config.width ||= 100
+  config.random ??= true
+  config.parseErrorMsg ??= '颜色解析失败'
   // logger.info(FontLibrary.families.slice(0, FontLibrary.families.length / 2))
   // logger.info(FontLibrary.families.slice(FontLibrary.families.length / 2))
   ctx
-    .command('color [color:text]', '给你点颜色看看')
+    .command('color [color:text]', '给你点颜色看看，支持颜色名、十六进制颜色、rgb、hsl等格式')
     .alias('颜色', '给你点颜色看看')
     // .shortcut(/^这是\s*(.+)\s*色$/, { args: ['$1'] }) //弃用于 koishi 4.16.5
     // .shortcut(/^这是\s*(#.{3,8})\s*$/, { args: ['$1'] })
     // .shortcut(/^这是\s*(\w+?)\((.+)\)\s*$/, { args: ['$1($2)'] })
     .action(async ({}, input) => {
       ctx.logger.info('<-- ', input)
-      if (input) {
-        try {
-          const colorName: string | undefined = colors[input] || colors[input.replace(/色$/, '')]
-          let co: Color
-          if (colorName) {
-            co = Color(colorName.toLowerCase())
-          } else {
-            co = Color(input)
-          }
-          ctx.logger.info('--> ', co.string())
-          if (config.template.enable) {
-            const tem = await loadImage(config.template.image.custom ? config.template.image.path : join(__dirname, config.template.image.path))
-            const canvas = new Canvas(tem.width, tem.height)
-            const cCtx = canvas.getContext('2d')
-            cCtx.save()
-            cCtx.fillStyle = co.hexa()
-            cCtx.fillRect(0, 0, canvas.width, canvas.height)
-            cCtx.restore()
-            cCtx.drawImage(tem, 0, 0)
-            cCtx.fillStyle = config.template.textColor
-            cCtx.textBaseline = config.template.textBaseline
-            cCtx.textAlign = config.template.textAlign
-            cCtx.font = `${config.template.fontWeight} ${config.template.fontStyle} ${config.template.fontSize}px/${config.template.textLineHeight}px ${config.template.fontFamily}`
-            cCtx.textWrap = true
-            // prettier-ignore
-            cCtx.fillText(config.template.text
+      if (!input) {
+        if (config.random) {
+          const arr = Object.keys(colors)
+          input = arr[Random.int(0, arr.length)]
+        } else {
+          return '<execute>color -h</execute>'
+        }
+      }
+      try {
+        const colorName: string | undefined = colors[input] || colors[input.replace(/色$/, '')]
+        let co: Color
+        if (colorName) {
+          co = Color(colorName.toLowerCase())
+        } else {
+          co = Color(input)
+        }
+        ctx.logger.info('--> ', co.string())
+        if (config.template.enable) {
+          const tem = await loadImage(config.template.image.custom ? config.template.image.path : join(__dirname, config.template.image.path))
+          const canvas = new Canvas(tem.width, tem.height)
+          const cCtx = canvas.getContext('2d')
+          cCtx.save()
+          drawChessboard(canvas)
+          cCtx.fillStyle = co.hexa()
+          cCtx.fillRect(0, 0, canvas.width, canvas.height)
+          cCtx.restore()
+          cCtx.drawImage(tem, 0, 0)
+          cCtx.fillStyle = config.template.textColor
+          cCtx.textBaseline = config.template.textBaseline
+          cCtx.textAlign = config.template.textAlign
+          cCtx.font = `${config.template.fontWeight} ${config.template.fontStyle} ${config.template.fontSize}px/${config.template.textLineHeight}px ${config.template.fontFamily}`
+          cCtx.textWrap = true
+          // prettier-ignore
+          cCtx.fillText(config.template.text
               .replaceAll('#[input]', input)
               .replaceAll('#[inputE]', colorName || input)
               .replaceAll('#[hex]', co.hex())
@@ -166,16 +182,20 @@ export function apply(ctx: Context, config: Config) {
               .replaceAll('#[hwb]', co.hwb().string())
               .replaceAll('#[cmyk]', co.cmyk().string())
               .replaceAll('#[hcg]', co.hcg().string()), calcPos(config.template.textX, tem), calcPos(config.template.textY, tem))
-            return h.image(canvas.toBufferSync('png'), 'image/png')
-          } else {
-            const canvas = new Canvas(config.width, config.height)
-            const cCtx = canvas.getContext('2d')
-            cCtx.fillStyle = co.hexa()
-            cCtx.fillRect(0, 0, canvas.width, canvas.height)
-            return h.image(canvas.toBufferSync('png'), 'image/png')
-          }
-        } catch (error) {
-          ctx.logger.warn(error)
+          return h.image(canvas.toBufferSync('png'), 'image/png')
+        } else {
+          const canvas = new Canvas(config.width, config.height)
+          const cCtx = canvas.getContext('2d')
+          cCtx.fillStyle = co.hexa()
+          cCtx.fillRect(0, 0, canvas.width, canvas.height)
+          return h.image(canvas.toBufferSync('png'), 'image/png')
+        }
+      } catch (error) {
+        ctx.logger.warn(error)
+        if (error.message.startsWith('Unable to parse color from string')) {
+          return config.parseErrorMsg
+        } else {
+          return '命令错误'
         }
       }
     })
@@ -198,3 +218,17 @@ function calcPos(str: string, { width, height }: { width: number; height: number
   }
   return Number(str)
 }
+
+function drawChessboard(canvas: Canvas, cellSize = 10, cellColors = ['#FFFFFF', '#808080']) {
+  const ctx = canvas.getContext('2d')
+  const rows = Math.ceil(canvas.height / cellSize)
+  const cols = Math.ceil(canvas.width / cellSize)
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const colorIndex = (row + col) % 2
+      ctx.fillStyle = cellColors[colorIndex]
+      ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize)
+    }
+  }
+}
+
