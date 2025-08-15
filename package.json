@@ -1,7 +1,7 @@
 {
   "name": "@ltxhhz/koishi-plugin-give-you-some-color",
   "description": "给你点颜色看看",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "files": [

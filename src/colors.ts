@@ -166,5 +166,7 @@ export default {
   漂白杏仁: 'BlanchedAlmond',
   古代白: 'AntiqueWhite',
   结实树: 'BrulyWood',
-  暗淡灰: 'DimGray'
+  暗淡灰: 'DimGray',
+
+  初音未来: '#39c5bb'
 }
